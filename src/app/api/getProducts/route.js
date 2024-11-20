@@ -6,7 +6,7 @@ export async function GET(req) {
 
   try {
 
-    const url = process.env.DB_ADDRESS;
+    const url = "mongodb+srv://root:root@cluster0.5ibf2.mongodb.net/app1?retryWrites=true&w=majority"
 
     const client = new MongoClient(url);
 
