@@ -25,7 +25,9 @@ export default function Home() {
   const [password, setPassword] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [weather, setWeatherData] = useState(null);
 
+  // Fetch products for dashboard
   useEffect(() => {
     if (showDash) {
       fetch('/api/getProducts')
@@ -36,6 +38,7 @@ export default function Home() {
     }
   }, [showDash]);
 
+  // Fetch cart data
   useEffect(() => {
     if (showCart) {
       fetch('/api/viewCart')
@@ -57,6 +60,7 @@ export default function Home() {
     }
   }, [showCart]);
 
+  // Fetch manager data
   useEffect(() => {
     if (showManager) {
       fetch('/api/manager')
@@ -77,6 +81,15 @@ export default function Home() {
         });
     }
   }, [showManager]);
+
+  // Fetch weather data
+  useEffect(() => {
+    fetch('/api/getWeather')
+      .then((res) => res.json())
+      .then((weather) => {
+        setWeatherData(weather);
+      });
+  }, []);
 
   function runShowAccount() {
     setShowFirstPage(false);
@@ -231,7 +244,12 @@ export default function Home() {
       {showFirstPage && (
         <Box component="section" sx={{ p: 2, border: '1px dashed grey' }}>
           <Typography variant="h5">Welcome to MyApp</Typography>
-          <p>This is the home page of the application.</p>
+          <p></p>
+          {weather ? (
+            <Typography>Current temperature in Dublin: {weather.temp}°C</Typography>
+          ) : (
+            <Typography>Loading weather...</Typography>
+          )}
         </Box>
       )}
 
@@ -329,42 +347,42 @@ export default function Home() {
         </Box>
       )}
 
-{showManager && (
-  <Box component="section" sx={{ p: 2, border: '1px dashed grey' }}>
-    <Typography variant="h5">Manager Dashboard</Typography>
-    {managerData && managerData.length > 0 ? (
-      <>
-        {managerData.map((order, i) => (
-          <div key={i} style={{ padding: '20px' }}>
-            Order ID: {order._id}
-            <br />
-            Placed by: {order.email}
-            <br />
-            Time: {new Date(order.createdAt).toLocaleString()}
-            <br />
-            Products:
-            <ul>
-              {order.items.map((item, idx) => (
-                <li key={idx}>
-                  {item.pname} - €{item.price}
-                </li>
+      {showManager && (
+        <Box component="section" sx={{ p: 2, border: '1px dashed grey' }}>
+          <Typography variant="h5">Manager Dashboard</Typography>
+          {managerData && managerData.length > 0 ? (
+            <>
+              {managerData.map((order, i) => (
+                <div key={i} style={{ padding: '20px' }}>
+                  Order ID: {order._id}
+                  <br />
+                  Placed by: {order.email}
+                  <br />
+                  Time: {new Date(order.createdAt).toLocaleString()}
+                  <br />
+                  Products:
+                  <ul>
+                    {order.items.map((item, idx) => (
+                      <li key={idx}>
+                        {item.pname} - €{item.price}
+                      </li>
+                    ))}
+                  </ul>
+                  <Typography>Total: €{order.total} euro</Typography>
+                </div>
               ))}
-            </ul>
-            <Typography>Total: €{order.total} euro</Typography>
-          </div>
-        ))}
-        <Typography variant="h6" sx={{ mt: 3 }}>
-          Total Money Made: €{managerData.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2)}
-        </Typography>
-        <Typography variant="h6" sx={{ mt: 1 }}>
-          Total Orders Placed: {managerData.length}
-        </Typography>
-      </>
-    ) : (
-      <Typography>No orders found.</Typography>
-    )}
-  </Box>
-)}
+              <Typography variant="h6" sx={{ mt: 3 }}>
+                Total Money Made: €{managerData.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2)}
+              </Typography>
+              <Typography variant="h6" sx={{ mt: 1 }}>
+                Total Orders Placed: {managerData.length}
+              </Typography>
+            </>
+          ) : (
+            <Typography>No orders found.</Typography>
+          )}
+        </Box>
+      )}
     </Box>
   );
 }
