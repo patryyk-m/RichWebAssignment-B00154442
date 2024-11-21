@@ -15,10 +15,12 @@ export default function Home() {
   const [showAccount, setShowAccount] = useState(false);
   const [showDash, setShowDash] = useState(false);
   const [showCart, setShowCart] = useState(false);
+  const [showManager, setShowManager] = useState(false);
   const [showFirstPage, setShowFirstPage] = useState(true);
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [data, setData] = useState(null);
   const [cartData, setCartData] = useState(null);
+  const [managerData, setManagerData] = useState(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
@@ -55,11 +57,33 @@ export default function Home() {
     }
   }, [showCart]);
 
+  useEffect(() => {
+    if (showManager) {
+      fetch('/api/manager')
+        .then((res) => {
+          if (res.ok) {
+            return res.json();
+          }
+          throw new Error('Unauthorized access for manager.');
+        })
+        .then((data) => {
+          setManagerData(data);
+        })
+        .catch((error) => {
+          alert(error.message);
+          setManagerData([]);
+          setShowManager(false);
+          setShowFirstPage(true);
+        });
+    }
+  }, [showManager]);
+
   function runShowAccount() {
     setShowFirstPage(false);
     setShowAccount(true);
     setShowDash(false);
     setShowCart(false);
+    setShowManager(false);
   }
 
   function runShowDash() {
@@ -67,6 +91,7 @@ export default function Home() {
     setShowAccount(false);
     setShowDash(true);
     setShowCart(false);
+    setShowManager(false);
   }
 
   function runShowCart() {
@@ -78,6 +103,19 @@ export default function Home() {
     setShowAccount(false);
     setShowDash(false);
     setShowCart(true);
+    setShowManager(false);
+  }
+
+  function runShowManager() {
+    if (!loggedIn || userData.accType !== 'manager') {
+      alert('Unauthorized access. Only managers can view this section.');
+      return;
+    }
+    setShowFirstPage(false);
+    setShowAccount(false);
+    setShowDash(false);
+    setShowCart(false);
+    setShowManager(true);
   }
 
   function runShowFirst() {
@@ -85,6 +123,7 @@ export default function Home() {
     setShowAccount(false);
     setShowDash(false);
     setShowCart(false);
+    setShowManager(false);
   }
 
   const handleRegister = async () => {
@@ -127,6 +166,7 @@ export default function Home() {
     setShowAccount(false);
     setShowDash(false);
     setShowCart(false);
+    setShowManager(false);
     setShowFirstPage(true);
     alert('Logged out successfully');
   };
@@ -141,7 +181,7 @@ export default function Home() {
       const res = await fetch(`/api/putInCart?pname=${pname}`);
       const data = await res.json();
       if (res.ok) {
-        alert(`${data.item.pname} added to cart $${data.item.price}`);
+        alert(`${data.item.pname} added to cart €${data.item.price}`);
       } else {
         alert(`Error: ${data.error}`);
       }
@@ -170,6 +210,11 @@ export default function Home() {
           <Button color="inherit" onClick={runShowCart}>
             Cart
           </Button>
+          {loggedIn && userData.accType === 'manager' && (
+            <Button color="inherit" onClick={runShowManager}>
+              Manager
+            </Button>
+          )}
           {!loggedIn && (
             <Button color="inherit" onClick={runShowAccount} sx={{ ml: 'auto' }}>
               Account
@@ -236,7 +281,7 @@ export default function Home() {
                 <div key={i} style={{ padding: '20px' }}>
                   Unique ID: {item._id}
                   <br />
-                  {item.pname} - ${item.price}
+                  {item.pname} - €{item.price}
                   <br />
                   <Button onClick={() => putInCart(item.pname)} variant="outlined">
                     Add to cart
@@ -247,39 +292,76 @@ export default function Home() {
         </Box>
       )}
 
-{showCart && (
+      {showCart && (
+        <Box component="section" sx={{ p: 2, border: '1px dashed grey' }}>
+          <Typography variant="h5">Cart</Typography>
+          {cartData && cartData.items.length > 0 ? (
+            <>
+              {cartData.items.map((item, i) => (
+                <div key={i} style={{ padding: '20px' }}>
+                  {item.pname} - €{parseFloat(item.price).toFixed(2)}
+                </div>
+              ))}
+              <Typography variant="h6" sx={{ mt: 2 }}>
+                Total: €{cartData.total.toFixed(2)}
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                sx={{ mt: 2 }}
+                onClick={async () => {
+                  const res = await fetch('/api/checkout', { method: 'POST' });
+                  const data = await res.json();
+                  if (res.ok) {
+                    alert(data.message);
+                    setCartData({ items: [], total: 0 }); // Clear cart
+                  } else {
+                    alert(`Error: ${data.error}`);
+                  }
+                }}
+              >
+                Checkout
+              </Button>
+            </>
+          ) : (
+            <Typography>No items in the cart.</Typography>
+          )}
+        </Box>
+      )}
+
+{showManager && (
   <Box component="section" sx={{ p: 2, border: '1px dashed grey' }}>
-    <Typography variant="h5">Cart</Typography>
-    {cartData && cartData.items.length > 0 ? (
+    <Typography variant="h5">Manager Dashboard</Typography>
+    {managerData && managerData.length > 0 ? (
       <>
-        {cartData.items.map((item, i) => (
+        {managerData.map((order, i) => (
           <div key={i} style={{ padding: '20px' }}>
-            {item.pname} - €{parseFloat(item.price).toFixed(2)}
+            Order ID: {order._id}
+            <br />
+            Placed by: {order.email}
+            <br />
+            Time: {new Date(order.createdAt).toLocaleString()}
+            <br />
+            Products:
+            <ul>
+              {order.items.map((item, idx) => (
+                <li key={idx}>
+                  {item.pname} - €{item.price}
+                </li>
+              ))}
+            </ul>
+            <Typography>Total: €{order.total} euro</Typography>
           </div>
         ))}
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Total: €{cartData.total.toFixed(2)}
+        <Typography variant="h6" sx={{ mt: 3 }}>
+          Total Money Made: €{managerData.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2)}
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          sx={{ mt: 2 }}
-          onClick={async () => {
-            const res = await fetch('/api/checkout', { method: 'POST' });
-            const data = await res.json();
-            if (res.ok) {
-              alert(data.message);
-              setCartData({ items: [], total: 0 }); // Clear cart
-            } else {
-              alert(`Error: ${data.error}`);
-            }
-          }}
-        >
-          Checkout
-        </Button>
+        <Typography variant="h6" sx={{ mt: 1 }}>
+          Total Orders Placed: {managerData.length}
+        </Typography>
       </>
     ) : (
-      <Typography>No items in the cart.</Typography>
+      <Typography>No orders found.</Typography>
     )}
   </Box>
 )}
