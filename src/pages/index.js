@@ -14,9 +14,11 @@ import { useState, useEffect } from 'react';
 export default function Home() {
   const [showAccount, setShowAccount] = useState(false);
   const [showDash, setShowDash] = useState(false);
+  const [showCart, setShowCart] = useState(false);
   const [showFirstPage, setShowFirstPage] = useState(true);
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [data, setData] = useState(null);
+  const [cartData, setCartData] = useState(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
@@ -32,22 +34,57 @@ export default function Home() {
     }
   }, [showDash]);
 
+  useEffect(() => {
+    if (showCart) {
+      fetch('/api/viewCart')
+        .then((res) => {
+          if (res.ok) {
+            return res.json();
+          }
+          throw new Error('Unauthorized. Please log in.');
+        })
+        .then((data) => {
+          setCartData(data);
+        })
+        .catch((error) => {
+          alert(error.message);
+          setCartData([]);
+          setShowCart(false);
+          setShowFirstPage(true);
+        });
+    }
+  }, [showCart]);
+
   function runShowAccount() {
     setShowFirstPage(false);
     setShowAccount(true);
     setShowDash(false);
+    setShowCart(false);
   }
 
   function runShowDash() {
     setShowFirstPage(false);
     setShowAccount(false);
     setShowDash(true);
+    setShowCart(false);
+  }
+
+  function runShowCart() {
+    if (!loggedIn) {
+      alert('You need to log in to view your cart.');
+      return;
+    }
+    setShowFirstPage(false);
+    setShowAccount(false);
+    setShowDash(false);
+    setShowCart(true);
   }
 
   function runShowFirst() {
     setShowFirstPage(true);
     setShowAccount(false);
     setShowDash(false);
+    setShowCart(false);
   }
 
   const handleRegister = async () => {
@@ -89,6 +126,7 @@ export default function Home() {
     setUserData(null);
     setShowAccount(false);
     setShowDash(false);
+    setShowCart(false);
     setShowFirstPage(true);
     alert('Logged out successfully');
   };
@@ -98,7 +136,7 @@ export default function Home() {
       alert('You need to log in to add items to the cart.');
       return;
     }
-  
+
     try {
       const res = await fetch(`/api/putInCart?pname=${pname}`);
       const data = await res.json();
@@ -108,7 +146,7 @@ export default function Home() {
         alert(`Error: ${data.error}`);
       }
     } catch (error) {
-      console.error("Error adding to cart:", error);
+      console.error('Error adding to cart:', error);
       alert('Failed to add to cart. Please try again.');
     }
   };
@@ -128,6 +166,9 @@ export default function Home() {
           </Button>
           <Button color="inherit" onClick={runShowDash}>
             Dashboard
+          </Button>
+          <Button color="inherit" onClick={runShowCart}>
+            Cart
           </Button>
           {!loggedIn && (
             <Button color="inherit" onClick={runShowAccount} sx={{ ml: 'auto' }}>
@@ -206,6 +247,42 @@ export default function Home() {
         </Box>
       )}
 
+{showCart && (
+  <Box component="section" sx={{ p: 2, border: '1px dashed grey' }}>
+    <Typography variant="h5">Cart</Typography>
+    {cartData && cartData.items.length > 0 ? (
+      <>
+        {cartData.items.map((item, i) => (
+          <div key={i} style={{ padding: '20px' }}>
+            {item.pname} - €{parseFloat(item.price).toFixed(2)}
+          </div>
+        ))}
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Total: €{cartData.total.toFixed(2)}
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ mt: 2 }}
+          onClick={async () => {
+            const res = await fetch('/api/checkout', { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+              alert(data.message);
+              setCartData({ items: [], total: 0 }); // Clear cart
+            } else {
+              alert(`Error: ${data.error}`);
+            }
+          }}
+        >
+          Checkout
+        </Button>
+      </>
+    ) : (
+      <Typography>No items in the cart.</Typography>
+    )}
+  </Box>
+)}
     </Box>
   );
 }
