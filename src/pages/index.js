@@ -98,12 +98,12 @@ export default function Home() {
       alert('You need to log in to add items to the cart.');
       return;
     }
-
+  
     try {
       const res = await fetch(`/api/putInCart?pname=${pname}`);
       const data = await res.json();
       if (res.ok) {
-        alert(data.data);
+        alert(`${data.item.pname} added to cart $${data.item.price}`);
       } else {
         alert(`Error: ${data.error}`);
       }
@@ -195,7 +195,7 @@ export default function Home() {
                 <div key={i} style={{ padding: '20px' }}>
                   Unique ID: {item._id}
                   <br />
-                  {item.pname} - {item.price}
+                  {item.pname} - ${item.price}
                   <br />
                   <Button onClick={() => putInCart(item.pname)} variant="outlined">
                     Add to cart
@@ -205,6 +205,7 @@ export default function Home() {
             : 'Loading...'}
         </Box>
       )}
+
     </Box>
   );
 }

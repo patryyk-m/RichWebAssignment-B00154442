@@ -6,7 +6,7 @@ export async function GET(req) {
   console.log("In the putInCart API page");
 
   const { searchParams } = new URL(req.url);
-  const pname = searchParams.get('pname');
+  const pname = searchParams.get('pname'); // Extract product name from the query string
 
   console.log("Product Name:", pname);
 
@@ -15,12 +15,12 @@ export async function GET(req) {
     const session = await getCustomSession();
 
     if (!session.loggedIn) {
-      // If user is not logged in, return an unauthorized response
+      // If user is not logged in return an unauthorized response
       console.log("Unauthorized access attempt");
       return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
     }
 
-    const email = session.email; // Correctly retrieve email
+    const email = session.email; // Retrieve email from session
     console.log("Session Email:", email);
 
     const url = process.env.DB_ADDRESS;
@@ -29,16 +29,27 @@ export async function GET(req) {
     await client.connect();
     console.log('Connected successfully to MongoDB');
 
-    const db = client.db('app1'); // Ensure you use the correct database name
-    const collection = db.collection('shopping_cart');
+    const db = client.db('app1'); 
+    const productsCollection = db.collection('products'); 
+    const cartCollection = db.collection('shopping_cart');
 
-    // Create the object to insert into the shopping cart
-    const myobj = { pname, email };
+    // Fetch the product from the products collection
+    const product = await productsCollection.findOne({ pname });
+    if (!product) {
+      return NextResponse.json({ error: `Product "${pname}" not found` }, { status: 404 });
+    }
 
-    const insertResult = await collection.insertOne(myobj);
+    const myobj = {
+      pname,
+      price: product.price, // Add price fetched from products collection
+      email, // Add the logged-in user's email
+    };
+
+    // Insert the product into the shopping cart collection
+    const insertResult = await cartCollection.insertOne(myobj);
     console.log("Insert result:", insertResult);
 
-    return NextResponse.json({ data: "Inserted successfully" });
+    return NextResponse.json({ data: "Inserted successfully", item: myobj });
   } catch (error) {
     console.error('Error inserting into the shopping cart:', error);
     return NextResponse.json({ error: "Failed to insert" }, { status: 500 });
