@@ -17,16 +17,17 @@ export async function POST(req) {
     const user = await collection.findOne({ username: body.username, pass: body.password });
 
     if (user) {
-    session.email = user.username; // save to session
-    session.acc_type = user.acc_type;
-    session.loggedIn = true;
-    await session.save();
+      session.email = user.username; // Save email in session
+      session.acc_type = user.acc_type;
+      session.loggedIn = true;
+      await session.save();
 
-    return new Response(
+      console.log("User logged in:", { email: user.username, acc_type: user.acc_type });
+
+      return new Response(
         JSON.stringify({ message: 'Login successful', acc_type: user.acc_type }),
         { status: 200 }
-    );
-
+      );
     } else {
       return new Response(JSON.stringify({ error: 'Invalid credentials' }), { status: 401 });
     }
