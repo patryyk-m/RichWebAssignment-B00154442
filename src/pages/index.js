@@ -297,8 +297,6 @@ export default function Home() {
           {data
             ? data.map((item, i) => (
                 <div key={i} style={{ padding: '20px' }}>
-                  Unique ID: {item._id}
-                  <br />
                   {item.pname} - €{item.price}
                   <br />
                   <Button onClick={() => putInCart(item.pname)} variant="outlined">
@@ -309,6 +307,7 @@ export default function Home() {
             : 'Loading...'}
         </Box>
       )}
+
 
       {showCart && (
         <Box component="section" sx={{ p: 2, border: '1px dashed grey' }}>
