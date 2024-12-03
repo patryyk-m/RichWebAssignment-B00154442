@@ -9,7 +9,14 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
 import TextField from '@mui/material/TextField';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle'; 
+import DialogContent from '@mui/material/DialogContent'; 
+import DialogContentText from '@mui/material/DialogContentText'; 
+import DialogActions from '@mui/material/DialogActions'; 
+import validator from 'email-validator';
 import { useState, useEffect } from 'react';
+
 
 export default function Home() {
   const [showAccount, setShowAccount] = useState(false);
@@ -26,6 +33,11 @@ export default function Home() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [userData, setUserData] = useState(null);
   const [weather, setWeatherData] = useState(null);
+  const [open, setOpen] = useState(false); // to manage dialog open/close
+  const [errorHolder, setErrorHolder] = useState(''); // to store the error message
+
+  const handleClose = () => setOpen(false); // function to close the dialog
+
 
   // Fetch products for dashboard
   useEffect(() => {
@@ -33,7 +45,7 @@ export default function Home() {
       fetch('/api/getProducts')
         .then((res) => res.json())
         .then((data) => {
-          setData(data);
+          setData(data); 
         });
     }
   }, [showDash]);
@@ -140,28 +152,44 @@ export default function Home() {
   }
 
   const handleRegister = async () => {
+    const errorMessage = validateForm();
+    if (errorMessage) {
+      setErrorHolder(errorMessage); // set the error message to display in the dialog
+      setOpen(true); // open the dialog
+      return;
+    }
+  
     const res = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: email, password }),
     });
-
+  
     const data = await res.json();
     if (res.ok) {
       alert('Registered successfully');
       setShowRegisterForm(false);
     } else {
-      alert(data.error);
+      setErrorHolder(data.error); // show server-side error in the dialog
+      setOpen(true); // Open the dialog
     }
   };
+  
 
   const handleLogin = async () => {
+    const errorMessage = validateForm();
+    if (errorMessage) {
+      setErrorHolder(errorMessage); // set the error message
+      setOpen(true); // open the dialog
+      return;
+    }
+  
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: email, password }),
     });
-
+  
     const data = await res.json();
     if (res.ok) {
       alert('Login successful');
@@ -169,9 +197,11 @@ export default function Home() {
       setUserData({ email, accType: data.acc_type });
       setShowRegisterForm(false);
     } else {
-      alert(data.error);
+      setErrorHolder(data.error); // show server-side error
+      setOpen(true); // open the dialog
     }
   };
+    
 
   const handleLogout = () => {
     setLoggedIn(false);
@@ -182,6 +212,17 @@ export default function Home() {
     setShowManager(false);
     setShowFirstPage(true);
     alert('Logged out successfully');
+  };
+
+  const validateForm = () => {
+    let errorMessage = '';
+    if (!validator.validate(email)) {
+      errorMessage += 'Invalid email format. ';
+    }
+    if (password.length < 6) {
+      errorMessage += 'Password must be at least 6 characters long.';
+    }
+    return errorMessage;
   };
 
   const putInCart = async (pname) => {
@@ -382,6 +423,19 @@ export default function Home() {
           )}
         </Box>
       )}
+
+      {/* dialog for displaying validation errors */}
+      <Dialog open={open} onClose={handleClose}>
+        <DialogTitle>Error</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{errorHolder}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} autoFocus>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
